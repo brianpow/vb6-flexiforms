@@ -15,12 +15,17 @@ Attribute VB_Exposed = False
 
 Option Explicit
 
-Public LeftIndent As Long
-Public RightIndent As Long
-Public TopIndent As Long
-Public BottomIndent As Long
-Public Width As Long
-Public Height As Long
-Public style As enLayoutStyle
-Public ctrl As Control
+Public LeftIndent As Currency
+Public RightIndent As Currency
+Public TopIndent As Currency
+Public BottomIndent As Currency
+Public Width As Currency
+Public Height As Currency
+Public ContainerMinWidth As Currency
+Public ContainerMinHeight As Currency
+Public Style As enLayoutStyle
+Public Ctrl As Control
+'Public scaleMode
+
+
 
