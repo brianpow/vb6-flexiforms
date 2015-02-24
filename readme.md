@@ -60,9 +60,12 @@ The following are combinations of layout styles:
     * Fix a bug that Controls inside container (e.g. PictureBox/Frame) are not resized and aligned correctly.
     * Add a switch to `RedrawLayout` to allow resizing if form is smaller than original size
 
+* 2015-02-24
+    * Controls in SSTab now work
+    * Minor bug fix
+
 ## Known Issues ##
-* When working with some controls likes SSTab, it hides the controls in inactive tabs by making their left position negative. Therefore [Flexible Forms] can't store its initial position and will not work. It may also cause overflow when calculating position and size.
-* The spacing between controls will also expand and shrink with controls proportionally (e.g. varWidth, varDepth). 
+* The spacing between controls will also expand and shrink when form resize (e.g. varWidth, varDepth). 
 
 ## References ##
 [Flexible Forms](http://www.codeguru.com/vb/gen/vb_forms/resizing/article.php/c5949/Creating-Flexible-Forms-in-Visual-Basic-FlexiForms.htm)

@@ -25,7 +25,6 @@ Public ContainerMinWidth As Currency
 Public ContainerMinHeight As Currency
 Public Style As enLayoutStyle
 Public Ctrl As Control
-'Public scaleMode
 
 
 

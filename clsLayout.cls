@@ -45,9 +45,10 @@ Private Function getLeft(Ctrl As Object)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         getLeft = Ctrl.Left
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        getLeft = Ctrl.Container.ScaleX(Ctrl.Left, Ctrl.Container.ScaleMode, vbTwips)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        getLeft = Container.ScaleX(Ctrl.Left, Container.ScaleMode, vbTwips)
+        getLeft = Ctrl.Left
     End If
 End Function
 
@@ -55,9 +56,10 @@ Private Function getTop(Ctrl As Object)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         getTop = Ctrl.Top
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        getTop = Ctrl.Container.ScaleY(Ctrl.Top, Ctrl.Container.ScaleMode, vbTwips)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        getTop = Container.ScaleY(Ctrl.Top, Container.ScaleMode, vbTwips)
+        getTop = Ctrl.Top
     End If
 End Function
 
@@ -65,27 +67,30 @@ Private Function getWidth(Ctrl As Object)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         getWidth = Ctrl.Width
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        getWidth = Ctrl.Container.ScaleX(Ctrl.Width, Ctrl.Container.ScaleMode, vbTwips)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        getWidth = Container.ScaleX(Ctrl.Width, Container.ScaleMode, vbTwips)
+        getWidth = Ctrl.Width
     End If
 End Function
 Private Function getHeight(Ctrl As Object)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         getHeight = Ctrl.Height
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        getHeight = Ctrl.Container.ScaleY(Ctrl.Height, Ctrl.Container.ScaleMode, vbTwips)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        getHeight = Container.ScaleY(Ctrl.Height, Container.ScaleMode, vbTwips)
+        getHeight = Ctrl.Height
     End If
 End Function
 Private Function setTop(Ctrl As Object, Top&)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         Ctrl.Top = Top
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        Ctrl.Top = Ctrl.Container.ScaleY(Top, vbTwips, Ctrl.Container.ScaleMode)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        Ctrl.Top = Container.ScaleY(Top, vbTwips, Container.ScaleMode)
+        Ctrl.Top = Top
     End If
 End Function
 
@@ -93,39 +98,49 @@ Private Function setLeft(Ctrl As Object, Left&)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         Ctrl.Left = Left
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        Ctrl.Left = Ctrl.Container.ScaleX(Left, vbTwips, Ctrl.Container.ScaleMode)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        Ctrl.Left = Container.ScaleX(Left, vbTwips, Container.ScaleMode)
+        Ctrl.Left = Left
     End If
 End Function
 Private Function setWidth(Ctrl As Object, Width&)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         Ctrl.Width = Width
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        Ctrl.Width = Ctrl.Container.ScaleX(Width, vbTwips, Ctrl.Container.ScaleMode)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        Ctrl.Width = Container.ScaleX(Width, vbTwips, Container.ScaleMode)
+        Ctrl.Width = Width
     End If
 End Function
 Private Function setHeight(Ctrl As Object, Height&)
 Dim Container As Object
     If TypeOf Ctrl Is Form Then
         Ctrl.Height = Height
+    ElseIf hasScaleMode(Ctrl.Container) Then
+        Ctrl.Height = Ctrl.Container.ScaleY(Height, vbTwips, Ctrl.Container.ScaleMode)
     Else
-        Set Container = FindContainerWithScaleMode(Ctrl.Container)
-        Ctrl.Height = Container.ScaleY(Height, vbTwips, Container.ScaleMode)
+        Ctrl.Height = Height
+
     End If
 End Function
 
 Private Function AddControl(Ctrl As Control, Style As enLayoutStyle)
-On Local Error GoTo errortrap
+
+On Local Error GoTo ErrorTrap
    Dim udt As New clsControl
    With udt
         .Style = Style
         Set .Ctrl = Ctrl
-        .LeftIndent = getLeft(Ctrl)
+        If IsSSTabFixNeeded(Ctrl) Then
+            .LeftIndent = getLeft(Ctrl) + 75000
+            .RightIndent = getWidth(Ctrl.Container) - (getWidth(Ctrl) + getLeft(Ctrl) + 75000)
+        Else
+            .LeftIndent = getLeft(Ctrl)
+            .RightIndent = getWidth(Ctrl.Container) - (getWidth(Ctrl) + getLeft(Ctrl))
+        End If
         .TopIndent = getTop(Ctrl)
-        .RightIndent = getWidth(Ctrl.Container) - (getWidth(Ctrl) + getLeft(Ctrl))
         .BottomIndent = getHeight(Ctrl.Container) - (getHeight(Ctrl) + getTop(Ctrl))
         .Width = getWidth(Ctrl)
         .Height = getHeight(Ctrl)
@@ -134,11 +149,13 @@ On Local Error GoTo errortrap
    End With
    m_Controls.Add udt
    Exit Function
-errortrap:
+ErrorTrap:
     Debug.Print "AddControl(): Adding failed! " & TypeName(Ctrl), Ctrl.Name
    ' there are some controls that have no visual element in run time (ie timer, image list etc)
 End Function
-
+Private Function IsSSTabFixNeeded(Ctrl As Control) As Boolean
+    IsSSTabFixNeeded = TypeName(Ctrl.Container) = "SSTab" And getLeft(Ctrl) < 0
+End Function
 Private Function NotNeg(x As Long)
    NotNeg = IIf(x < 0, 0, x)
 End Function
@@ -179,10 +196,10 @@ Private Function GetLayoutStyle(s As String) As enLayoutStyle
 End Function
 
 Public Function RedrawLayout(Optional ResizeBelowMinSize As Boolean = False)
-   Dim Width As Currency
-   Dim Height As Currency
+   Dim Width As Long
+   Dim Height As Long
    Dim Ctrl As clsControl
-      
+   
    For Each Ctrl In m_Controls
       With Ctrl
          Width = getWidth(.Ctrl.Container)
@@ -190,33 +207,44 @@ Public Function RedrawLayout(Optional ResizeBelowMinSize As Boolean = False)
          Height = getHeight(.Ctrl.Container)
          If Not ResizeBelowMinSize Then If Height < .ContainerMinHeight Then Height = .ContainerMinHeight
          
-         
          If (.Style And lsLeft) = lsLeft Then
-            Call setLeft(.Ctrl, .LeftIndent)
+            If IsSSTabFixNeeded(.Ctrl) Then
+                Call setLeft(.Ctrl, .LeftIndent - 75000)
+            Else
+                Call setLeft(.Ctrl, .LeftIndent)
+            End If
          ElseIf (.Style And lsXProp) = lsXProp Then
-            Call setLeft(.Ctrl, (.LeftIndent * Width) / .ContainerMinWidth)
+            If IsSSTabFixNeeded(.Ctrl) Then
+                Call setLeft(.Ctrl, ((.LeftIndent) * (Width / .ContainerMinWidth) - 75000))
+            Else
+                Call setLeft(.Ctrl, .LeftIndent * (Width / .ContainerMinWidth))
+            End If
          End If
          If (.Style And lsHorizontal) = lsHorizontal Then
-            Call setWidth(.Ctrl, NotNeg((Width - .RightIndent) - .LeftIndent))
+                Call setWidth(.Ctrl, NotNeg((Width - .RightIndent) - .LeftIndent))
          Else
             If (.Style And lsWprop) = lsWprop Then
-               Call setWidth(.Ctrl, (.Width * Width) / .ContainerMinWidth)
+               Call setWidth(.Ctrl, .Width * (Width / .ContainerMinWidth))
             End If
             If (.Style And lsRight) = lsRight Then
-               Call setLeft(.Ctrl, NotNeg((Width - .RightIndent) - getWidth(.Ctrl)))
+                If IsSSTabFixNeeded(.Ctrl) Then
+                    Call setLeft(.Ctrl, (Width - .RightIndent) - getWidth(.Ctrl) - 75000)
+                Else
+                    Call setLeft(.Ctrl, (Width - .RightIndent) - getWidth(.Ctrl))
+                End If
             End If
          End If
          
          If (.Style And lsTop) = lsTop Then
             Call setTop(.Ctrl, .TopIndent)
          ElseIf (.Style And lsYProp) = lsYProp Then
-            Call setTop(.Ctrl, (.TopIndent * Height) / .ContainerMinHeight)
+            Call setTop(.Ctrl, .TopIndent * (Height / .ContainerMinHeight))
          End If
          If (.Style And lsVertical) = lsVertical Then
             Call setHeight(.Ctrl, NotNeg((Height - .BottomIndent) - .TopIndent))
          Else
             If (.Style And lsDprop) = lsDprop Then
-               Call setHeight(.Ctrl, (.Height * Height) / .ContainerMinHeight)
+               Call setHeight(.Ctrl, .Height * (Height / .ContainerMinHeight))
             End If
             If (.Style And lsBottom) = lsBottom Then
                Call setTop(.Ctrl, NotNeg((Height - .BottomIndent) - getHeight(.Ctrl)))
@@ -224,7 +252,6 @@ Public Function RedrawLayout(Optional ResizeBelowMinSize As Boolean = False)
          End If
       End With
    Next
-
 End Function
 
 Public Function SetLayout(frm As Form)
@@ -239,6 +266,8 @@ Public Function SetLayout(frm As Form)
          End If
       Next
 End Function
+
+
 
 
 
